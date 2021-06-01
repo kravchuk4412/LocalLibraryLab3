@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Authors{% endblock title %}
+
+{% block content %}
+  <div class="container mt-3 text-center">
+    <h3 class="display-3"> Author List </h3>
+  </div>
+
+  <div class="container mt-4">
+    {% if author_list %}
+      <ul class="list-group">
+        {% for author in author_list %}
+          <li class="list-group-item list-group-item-warning">
+            <a href="{% url 'author_detail' author.pk %}">{{ author.first_name }} {{ author.last_name }}</a> ( {{ author.date_of_birth }} - {% if author.date_of_death %} {{ author.date_of_death }} {% else %} alive {% endif %})
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>There are no authors in the library.</p>
+    {% endif %} 
+{% endblock %}

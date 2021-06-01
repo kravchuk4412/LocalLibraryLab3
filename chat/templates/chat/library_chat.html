@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Library Chat{% endblock title %}
+
+{% block content %}
+	<div class="m-4">
+		<div class="raw mt-2" id="chat"> </div>
+		<div class="raw form-group">
+		    <input id="chat-message-input" type="text" size="120">
+		</div>
+		<div class="text-center">
+		<input id="chat-message-submit" class="btn btn-warning" type="button" value="Send">
+		<div class="btn-group">
+		  <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+		    Send author
+		  </button>
+		  <ul class="dropdown-menu">
+		  	{% for author in authors %}
+			    <li><a class="dropdown-item author" value="{{ author.id }}" href="#">{{ author }}</a></li>
+		    {% endfor %}
+		  </ul>
+		</div>
+
+		<div class="btn-group">
+		  <button type="button" class="btn btn-warning dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+		    Send book
+		  </button>
+		  <ul class="dropdown-menu">
+		  	{% for book in books %}
+			    <li><a class="dropdown-item book" value="{{ book.id }}" href="#">{{ book.title }}</a></li>
+		    {% endfor %}
+		  </ul>
+		</div>
+
+		{% if request.user.is_staff %}
+			<!-- Button trigger modal -->
+			<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+			  Users online
+			</button>
+
+			<!-- Modal -->
+			<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+			  <div class="modal-dialog modal-dialog-scrollable">
+			    <div class="modal-content">
+			      <div class="modal-header">
+			        <h5 class="modal-title" id="staticBackdropLabel">Users online</h5>
+			        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+			      </div>
+			      <div class="modal-body">
+					<div class="d-flex justify-content-center text-center">
+						<table class="table table-bordered table-striped table-light">
+						  <thead>
+						  	   <tr>
+							      <th scope="col">ID</th>
+							      <th scope="col">First name</th>
+							      <th scope="col">Last name</th>
+							      <th scope="col">Username</th>
+							      <th scope="col">Connected</th>
+							   </tr>
+						  </thead>
+						  <tbody>
+						  	{% for connected_user in connected_users %}
+						  	<tr class="table-warning">
+						      <td class="bg-warning">{{ connected_user.id }}</td>
+						      <td class="bg-warning">{{ connected_user.first_name }}</td>
+						      <td class="bg-warning">{{ connected_user.last_name }}</td>
+						      <td class="bg-warning">{{ connected_user.username }}</td>
+						      <td class="bg-warning">{{ connected_user.connected }}</td>
+						    </tr>
+						    {% endfor %}
+						  </tbody>
+						</table>
+					</div>
+			      </div>
+			      <div class="modal-footer">
+			        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+			      </div>
+			    </div>
+			  </div>
+			</div>
+		{% endif %}
+	</div>
+	    {{ room_name|json_script:"room-name" }}
+	</div>
+{% endblock content %}
+
+{% block domready %}
+		 	var url = 'ws://' + window.location.host +
+		            '/ws/chat/' + '{{ room_name }}/';
+		  	var chatSocket = new WebSocket(url);
+
+
+			chatSocket.onmessage = function(e) {
+				var data = JSON.parse(e.data);
+				var message = data.message;
+
+			  	var dateOptions = {hour: 'numeric', minute: 'numeric', hour12: true};
+				var datetime = new Date(data['datetime']).toLocaleString('en', dateOptions);
+				var isMe = data.username === '{{ request.user }}';
+				var source = isMe ? 'me' : 'other';
+				var name = isMe ? 'Me' : data.username;
+
+				var $chat = $('#chat');
+				$chat.append('<div class="m-2">' + '<div class="message ' + source + '">' +
+								'<strong>' + name + '</strong> ' +
+								'<span class="date">' + datetime + '</span><br>' +
+								message +
+								'</div>' + '</div>');
+				$chat.scrollTop($chat[0].scrollHeight);
+			};
+
+			chatSocket.onclose = function(e) {
+				console.error('Chat socket closed unexpectedly');
+			};
+
+			var $input = $('#chat-message-input');
+			var $submit = $('#chat-message-submit');
+
+			$submit.click(function() {
+				var message = $input.val();
+				if(message) {
+					// send message in JSON format
+			    	chatSocket.send(JSON.stringify({'message': message}));
+
+			     	// clear input
+			     	$input.val('');
+
+			      	// return focus
+			      	$input.focus();
+			    }
+			});
+
+			$input.focus();
+			$input.keyup(function(e) {
+				if (e.which === 13) {
+			    	// submit with enter / return key
+			    	$submit.click();
+			    }
+			});
+
+			$(".dropdown-item.book").on('click', function() {
+				var id = $(this).attr('value');
+	        	url = 'http://127.0.0.1:8000/api/books/' + id + '/';
+	        	fetch(url)
+				  .then((response) => {
+				    return response.json();
+				  })
+				  .then((data) => {
+				  	const message = data.title + '<br>' + data.genre + '<br>' + data.summary;
+	            	chatSocket.send(JSON.stringify({
+	                	'message': message
+	            	}));
+				  });
+			});
+
+
+			$(".dropdown-item.author").on('click', function() {
+				var id = $(this).attr('value');
+	        	url = 'http://127.0.0.1:8000/api/authors/' + id + '/';
+	        	console.log(url);
+	        	fetch(url)
+				  .then((response) => {
+				    return response.json();
+				  })
+				  .then((data) => {
+				  	const message = data.first_name + " " + data.last_name +
+				  	" (" + data.date_of_birth + " - " + (data.date_of_death ? data.date_of_death : "alive") + ")";
+				  	console.log(message);
+	            	chatSocket.send(JSON.stringify({
+	                	'message': message
+	            	}));
+				  });
+			});
+		{% endblock %}

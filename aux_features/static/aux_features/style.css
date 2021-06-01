@@ -1,0 +1,24 @@
+#chat .message {
+    background:#efefef;
+    padding:10px 20px;
+    border-radius:4px;
+    width:auto;
+    display:inline;
+    float:left;
+    margin:10px 10px 0;
+    min-width:440px;
+    clear:both;
+}
+
+#chat .message.me {
+    display:inline;
+    float:right;
+    background:#DCEDE0;
+    color:#000000;
+}
+
+#chat .date {
+    color:#aaa;
+    font-style:italic;
+    font-size:12px;
+}

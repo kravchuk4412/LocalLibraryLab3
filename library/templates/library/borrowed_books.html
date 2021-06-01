@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Borrowed books{% endblock title %}
+
+{% block content %}
+  <div class="container mt-3 text-center">
+    <h3 class="display-3"> Borrowed books list </h3>
+  </div>
+
+  <div class="container mt-4">
+    {% if borrowedbook_list %}
+      <ul class="list-group">
+        {% for bookinst in borrowedbook_list %}
+          <li class="list-group-item list-group-item-warning">
+            <a href="{% url 'book_detail' bookinst.book.pk %}">{{bookinst.book.title}}</a> ( have to return due to: <b>{{ bookinst.due_back }} </b>) Borrower: <b> {{ bookinst.borrower }} </b>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p>There are no borrowed books yet.</p>
+    {% endif %} 
+{% endblock %}
